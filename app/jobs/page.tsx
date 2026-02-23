@@ -1,16 +1,24 @@
 'use client';
 
 import { motion } from 'framer-motion';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { doctors, organizations } from '@/data/mockData';
+import { useRole } from '@/components/AppShell';
 
 export default function JobsPage() {
+  const { role } = useRole();
   const [specialtyFilter, setSpecialtyFilter] = useState('All');
   const [jobTitle, setJobTitle] = useState('');
   const [jobLocation, setJobLocation] = useState('');
+  const [loadingCandidates, setLoadingCandidates] = useState(true);
   const [activeJobs, setActiveJobs] = useState(() =>
     organizations.flatMap((org) => org.jobOpenings.map((opening) => `${opening} · ${org.hospitalName} (${org.location})`))
   );
+
+  useEffect(() => {
+    const timer = setTimeout(() => setLoadingCandidates(false), 650);
+    return () => clearTimeout(timer);
+  }, []);
 
   const specialties = ['All', ...new Set(doctors.map((doctor) => doctor.specialty))];
   const filteredDoctors = useMemo(
@@ -28,11 +36,19 @@ export default function JobsPage() {
 
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6">
+      {role !== 'Organization' && (
+        <div className="rounded-xl border border-brand-100 bg-brand-50 p-3 text-sm text-brand-700">
+          You are previewing hiring workflows outside Organization mode. Switch role to Organization for recruitment-focused context.
+        </div>
+      )}
+
       <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
         <h2 className="mb-3 text-lg font-semibold">Organization Dashboard</h2>
         <ul className="space-y-2 text-sm">
           {activeJobs.map((job) => (
-            <li key={job} className="rounded-lg bg-slate-50 p-3">{job}</li>
+            <li key={job} className="rounded-lg bg-slate-50 p-3">
+              {job}
+            </li>
           ))}
         </ul>
       </section>
@@ -69,7 +85,13 @@ export default function JobsPage() {
             ))}
           </select>
         </div>
-        {filteredDoctors.length === 0 ? (
+        {loadingCandidates ? (
+          <div className="space-y-2">
+            {[1, 2, 3].map((row) => (
+              <div key={row} className="h-14 animate-pulse rounded-lg bg-slate-100" />
+            ))}
+          </div>
+        ) : filteredDoctors.length === 0 ? (
           <p className="text-sm text-slate-500">No candidates match this specialty.</p>
         ) : (
           <div className="space-y-2">
@@ -77,7 +99,9 @@ export default function JobsPage() {
               <div key={doctor.id} className="flex items-center justify-between rounded-lg border border-slate-100 p-3">
                 <div>
                   <p className="font-medium">{doctor.name}</p>
-                  <p className="text-xs text-slate-500">{doctor.specialty} · {doctor.location}</p>
+                  <p className="text-xs text-slate-500">
+                    {doctor.specialty} · {doctor.location}
+                  </p>
                 </div>
                 <button className="rounded-lg border border-trust-500 px-3 py-1 text-xs text-trust-600">Message Candidate</button>
               </div>

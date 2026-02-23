@@ -1,18 +1,26 @@
 'use client';
 
 import { AnimatePresence, motion } from 'framer-motion';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { doctors, posts } from '@/data/mockData';
+import { useRole } from '@/components/AppShell';
 
 const slots = ['09:00 AM', '10:30 AM', '12:00 PM', '03:00 PM', '05:00 PM'];
 const days = Array.from({ length: 14 }, (_, index) => index + 1);
 
 export default function DirectoryPage() {
+  const { role } = useRole();
   const [query, setQuery] = useState('');
+  const [loadingProfiles, setLoadingProfiles] = useState(true);
   const [selectedDoctorId, setSelectedDoctorId] = useState(doctors[0]?.id ?? '');
   const [selectedDate, setSelectedDate] = useState<number | null>(null);
   const [selectedSlot, setSelectedSlot] = useState<string | null>(null);
   const [showSuccess, setShowSuccess] = useState(false);
+
+  useEffect(() => {
+    const timer = setTimeout(() => setLoadingProfiles(false), 600);
+    return () => clearTimeout(timer);
+  }, []);
 
   const filteredDoctors = useMemo(() => {
     const search = query.toLowerCase();
@@ -34,6 +42,12 @@ export default function DirectoryPage() {
 
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6">
+      {role !== 'Patient' && (
+        <div className="rounded-xl border border-brand-100 bg-brand-50 p-3 text-sm text-brand-700">
+          You are previewing patient booking and trust features outside Patient mode.
+        </div>
+      )}
+
       <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
         <h2 className="mb-3 text-lg font-semibold">Find Your Doctor</h2>
         <input
@@ -43,30 +57,38 @@ export default function DirectoryPage() {
           className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
         />
         <div className="mt-3 grid gap-2 md:grid-cols-2">
-          {filteredDoctors.map((doctor) => (
-            <button
-              key={doctor.id}
-              onClick={() => setSelectedDoctorId(doctor.id)}
-              className={`rounded-lg border p-3 text-left ${
-                selectedDoctorId === doctor.id ? 'border-brand-500 bg-brand-50' : 'border-slate-200 bg-white'
-              }`}
-            >
-              <p className="font-medium">{doctor.name}</p>
-              <p className="text-xs text-slate-500">{doctor.specialty} · {doctor.location}</p>
-            </button>
-          ))}
+          {loadingProfiles
+            ? [1, 2, 3, 4].map((row) => <div key={row} className="h-16 animate-pulse rounded-lg bg-slate-100" />)
+            : filteredDoctors.map((doctor) => (
+                <button
+                  key={doctor.id}
+                  onClick={() => setSelectedDoctorId(doctor.id)}
+                  className={`rounded-lg border p-3 text-left ${
+                    selectedDoctorId === doctor.id ? 'border-brand-500 bg-brand-50' : 'border-slate-200 bg-white'
+                  }`}
+                >
+                  <p className="font-medium">{doctor.name}</p>
+                  <p className="text-xs text-slate-500">
+                    {doctor.specialty} · {doctor.location}
+                  </p>
+                </button>
+              ))}
         </div>
-        {filteredDoctors.length === 0 && <p className="mt-3 text-sm text-slate-500">No doctors match your search.</p>}
+        {!loadingProfiles && filteredDoctors.length === 0 && <p className="mt-3 text-sm text-slate-500">No doctors match your search.</p>}
       </section>
 
-      {selectedDoctor && (
+      {selectedDoctor && !loadingProfiles && (
         <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
           <h2 className="text-lg font-semibold">Doctor Profile</h2>
-          <p className="mt-1 text-sm text-slate-600">{selectedDoctor.credentials} · {selectedDoctor.specialty}</p>
+          <p className="mt-1 text-sm text-slate-600">
+            {selectedDoctor.credentials} · {selectedDoctor.specialty}
+          </p>
           <p className="mt-2 text-sm text-slate-700">{selectedDoctor.about}</p>
           <div className="mt-3 flex flex-wrap gap-2">
             {Object.entries(selectedDoctor.skills).map(([skill, count]) => (
-              <span key={skill} className="rounded-full bg-trust-500/10 px-3 py-1 text-xs text-trust-600">{skill} ({count})</span>
+              <span key={skill} className="rounded-full bg-trust-500/10 px-3 py-1 text-xs text-trust-600">
+                {skill} ({count})
+              </span>
             ))}
           </div>
           <h3 className="mt-4 text-sm font-semibold">Educational Posts</h3>
@@ -75,7 +97,9 @@ export default function DirectoryPage() {
               <p className="text-sm text-slate-500">No posts yet.</p>
             ) : (
               doctorPosts.map((post) => (
-                <article key={post.id} className="rounded-lg bg-slate-50 p-3 text-sm text-slate-700">{post.content}</article>
+                <article key={post.id} className="rounded-lg bg-slate-50 p-3 text-sm text-slate-700">
+                  {post.content}
+                </article>
               ))
             )}
           </div>

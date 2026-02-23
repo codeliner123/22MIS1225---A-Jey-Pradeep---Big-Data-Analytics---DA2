@@ -3,21 +3,36 @@
 import Image from 'next/image';
 import { motion } from 'framer-motion';
 import { Sparkles } from 'lucide-react';
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { doctors, posts as seedPosts } from '@/data/mockData';
+import { useRole } from '@/components/AppShell';
 
 export default function FeedPage() {
+  const { role } = useRole();
   const [draft, setDraft] = useState('Sharing key lessons from this week\'s patient rounds.');
   const [enhancing, setEnhancing] = useState(false);
+  const [loadingFeed, setLoadingFeed] = useState(true);
   const [posts] = useState(seedPosts);
   const [doctorSkills, setDoctorSkills] = useState(() => doctors);
   const [endorsed, setEndorsed] = useState<Record<string, boolean>>({});
+
+  useEffect(() => {
+    const timer = setTimeout(() => setLoadingFeed(false), 700);
+    return () => clearTimeout(timer);
+  }, []);
+
+  const roleNotice = useMemo(() => {
+    if (role === 'Doctor') return null;
+    return role === 'Organization'
+      ? 'You are viewing the doctor networking feed in Organization mode. Use this to discover clinical leaders.'
+      : 'You are viewing the doctor networking feed in Patient mode. Use this to evaluate doctor expertise and communication style.';
+  }, [role]);
 
   const enhanceContent = () => {
     setEnhancing(true);
     setTimeout(() => {
       setDraft(
-        'This week\'s multidisciplinary rounds reinforced how transparent care plans and daily mobility goals can measurably improve patient outcomes and satisfaction.'
+        'This week\'s multidisciplinary rounds reinforced how transparent care plans, early mobilization targets, and family education can measurably improve clinical outcomes and patient satisfaction.'
       );
       setEnhancing(false);
     }, 2000);
@@ -36,6 +51,8 @@ export default function FeedPage() {
 
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6">
+      {roleNotice && <div className="rounded-xl border border-brand-100 bg-brand-50 p-3 text-sm text-brand-700">{roleNotice}</div>}
+
       <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
         <h2 className="mb-3 text-lg font-semibold">Create Clinical Insight</h2>
         <textarea
@@ -55,7 +72,13 @@ export default function FeedPage() {
 
       <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
         <h2 className="mb-4 text-lg font-semibold">AI-Enhanced Feed</h2>
-        {posts.length === 0 ? (
+        {loadingFeed ? (
+          <div className="space-y-3">
+            {[1, 2].map((item) => (
+              <div key={item} className="h-24 animate-pulse rounded-xl bg-slate-100" />
+            ))}
+          </div>
+        ) : posts.length === 0 ? (
           <p className="text-sm text-slate-500">No posts yet.</p>
         ) : (
           <div className="space-y-4">
